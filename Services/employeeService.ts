@@ -8,7 +8,7 @@ export async function employeeExists(id: number){
   }
 };
 
-export function formatEmployeeName(name: string){ //TODO: There is a simpler way to get the same result and is easier to understand
+export function formatEmployeeName(name){ //TODO: There is a simpler way to get the same result and is easier to understand
   let formattedName = "";
   const nameArray = name.toUpperCase().split(' ');
 
