@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import * as cardService from "../Services/cardService.js";
 
 export async function createCard(req: Request, res: Response){
-  const userRequest = await cardService.createUserCard(req.body);
+  await cardService.createUserCard(req.body);
   return res.sendStatus(201);
 };
 

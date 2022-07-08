@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import Cryptr from "cryptr";
 import dotenv from "dotenv";
+import bcrypt from "bcrypt";
 import { faker } from "@faker-js/faker";
 
 import * as employeeService from "./employeeService.js";
@@ -69,9 +70,9 @@ async function checkSecurityCode(securityCode, cardId){
   const card = await cardRepository.findById(cardId);
   const encryptKey = process.env.CRYPTRKEY;
   const cryptr = new Cryptr(encryptKey);
-  const decryptedScurityCode = cryptr.decrypt(card.securityCode);
-
-  if(securityCode !== decryptedScurityCode){
+  const decryptedSecurityCode = cryptr.decrypt(card.securityCode);
+  console.log(decryptedSecurityCode) //TODO: Excluir linha depois
+  if(securityCode !== decryptedSecurityCode){
     throw {type: "cardError", message: "Wrong CVC", code: 401};
   }
 }
@@ -87,8 +88,9 @@ async function checkPassword(password: number){
 }
 
 async function updatePassword(cardId, password){
-  await cardRepository.update(cardId, {password: password});
-  
+  const SALT = 10;
+  const encryptedPassword = await bcrypt.hash(password.toString(), SALT)
+  await cardRepository.update(cardId, {password: encryptedPassword});
 }
 
 export async function createUserCard(body){
