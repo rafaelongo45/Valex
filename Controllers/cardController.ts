@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 
-import { insert } from "../repositories/cardRepository.js";
+import { createUserCard } from "../Services/cardService.js";
 
 export async function createCard(req: Request, res: Response){
   const {
@@ -16,6 +16,6 @@ export async function createCard(req: Request, res: Response){
     type
   } = req.body;
 
-  await insert(req.body);
-  return res.sendStatus(201);
+  const userRequest = await createUserCard(req.body);
+  return res.status(201).send("ok");
 }
