@@ -3,20 +3,11 @@ import Cryptr from "cryptr";
 import dotenv from "dotenv";
 import { faker } from "@faker-js/faker";
 
+import * as employeeService from "./employeeService.js";
 import * as cardRepository from "../repositories/cardRepository.js";
-import * as companyRepository from "../repositories/companyRepository.js";
 import * as employeeRepository from "../repositories/employeeRepository.js";
 
-import * as employeeService from "./employeeService.js";
-
 dotenv.config();
-export async function APIKeyExists(key){
-  const companyRequest = await companyRepository.findByApiKey(key);
-
-  if(!companyRequest){
-    throw { type:"APIKey", message: "No company has this API Key", code:400 }
-  }
-};
 
 async function checkCardType(type: cardRepository.TransactionTypes, employeeId: number){
   const card = await cardRepository.findByTypeAndEmployeeId(type, employeeId);
@@ -44,6 +35,62 @@ function generateCVC(){
   return encryptedCVC;
 };
 
+async function cardExists(cardId){
+  const card = await cardRepository.findById(cardId);
+
+  if(!card){
+    throw { type: "cardError", message: "There is no card registered with this card id", code: 400}
+  }
+};
+
+async function isCardExpired(cardId){
+  const card = await cardRepository.findById(cardId);
+  const today = dayjs().format('MM/YY');
+  const isTodayAfterExpirationDate = dayjs(card.expirationDate).isBefore(today)
+  
+  if(isTodayAfterExpirationDate){
+    throw { type: "dateError", message: "Card is not valid anymore. Date expired.", code: 401}
+  }
+};
+
+async function cardAlreadyActivated(cardId){
+  const card = await cardRepository.findById(cardId);
+
+  if(card.password){
+    throw { type: "cardError", message: "Card was already activated", code: 403}
+  }
+};
+
+async function checkSecurityCode(securityCode, cardId){
+  if(!securityCode){
+    throw { type: "cardError", message: "CVC not sent", code: 400};
+  }
+
+  const card = await cardRepository.findById(cardId);
+  const encryptKey = process.env.CRYPTRKEY;
+  const cryptr = new Cryptr(encryptKey);
+  const decryptedScurityCode = cryptr.decrypt(card.securityCode);
+
+  if(securityCode !== decryptedScurityCode){
+    throw {type: "cardError", message: "Wrong CVC", code: 401};
+  }
+}
+
+async function checkPassword(password: number){
+  if(typeof password !== 'number'){
+    throw { type: "passwordError", message: "Password must only have numbers", code: 400}
+  }
+
+  if(password.toString().length !== 4){
+    throw { type: "passwordError", message: "Password must have 4 characters", code: 400}
+  }
+}
+
+async function updatePassword(cardId, password){
+  await cardRepository.update(cardId, {password: password});
+  
+}
+
 export async function createUserCard(body){
   await employeeService.employeeExists(body.employeeId);
   await checkCardType(body.type, body.employeeId);
@@ -69,3 +116,11 @@ export async function createUserCard(body){
   await cardRepository.insert(data);
 };
 
+export async function activateCard(body, cardId){
+  await cardExists(cardId);
+  await isCardExpired(cardId);
+  await cardAlreadyActivated(cardId);
+  await checkSecurityCode(body.securityCode, cardId);
+  await checkPassword(body.password);
+  await updatePassword(cardId, body.password);
+};
