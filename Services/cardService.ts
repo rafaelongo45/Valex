@@ -132,6 +132,25 @@ async function cardBalance(income: number, expense: number){
   return income - expense
 };
 
+async function isCardBlocked(cardId: number){
+  const cardInfo = await cardRepository.findById(cardId);
+  const isBlocked = cardInfo.isBlocked;
+  
+  if(isBlocked){
+    throw { type: "cardError", message: "Card is already blocked", code: 403}
+  };
+};
+
+async function comparePassword(cardId: number, password: number){
+  const card =  await cardRepository.findById(cardId);
+  const encryptedPassword = card.password;
+  const isPasswordCorrect = bcrypt.compareSync(password.toString(), encryptedPassword);
+  
+  if(!isPasswordCorrect){
+    throw { type: "cardError", message: "Wrong password", code: 403}
+  }
+}
+
 export async function createUserCard(body){
   await employeeService.employeeExists(body.employeeId);
   await checkCardType(body.type, body.employeeId);
@@ -178,4 +197,12 @@ export async function getBalanceTransactions(cardId: number){
     transactions: cardTransactions.transactions,
     recharges: cardRecharges.recharges
   }
+};
+
+export async function blockCard(cardId: number, password: number){
+  await cardExists(cardId);
+  await isCardExpired(cardId);
+  await isCardBlocked(cardId);
+  await checkPassword(password);
+  await comparePassword(cardId, password);
 }

@@ -18,4 +18,11 @@ export async function getCardInfo(req: Request <{id: number}>, res: Response){
   const { id } = req.params;
   const balanceTransactions = await cardService.getBalanceTransactions(id);
   return res.status(200).send(balanceTransactions);
+};
+
+export async function blockCard(req: Request <{id: number}>, res: Response){
+  const { id } = req.params;
+  const { password } : { password: number }= req.body;
+  await cardService.blockCard(id, password);
+  return res.sendStatus(200);
 }
