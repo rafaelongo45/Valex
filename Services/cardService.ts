@@ -6,7 +6,9 @@ import { faker } from "@faker-js/faker";
 
 import * as employeeService from "./employeeService.js";
 import * as cardRepository from "../repositories/cardRepository.js";
+import * as paymentRepository from "../repositories/paymentRepository.js";
 import * as employeeRepository from "../repositories/employeeRepository.js";
+import * as rechargeRepository from "../repositories/rechargeRepository.js";
 
 dotenv.config();
 
@@ -16,6 +18,7 @@ async function checkCardType(type: cardRepository.TransactionTypes, employeeId: 
   if(card){
     throw { type: "cardError", message: "User already has card of this type", code: 409};
   }
+
 };
 
 function createExpirationDate(){
@@ -26,7 +29,7 @@ function createExpirationDate(){
 function generateCardNumber(){
   const cardNumber = faker.random.numeric(16);
   return cardNumber;
-}
+};
 
 function generateCVC(){
   const encryptKey = process.env.CRYPTRKEY;
@@ -36,7 +39,7 @@ function generateCVC(){
   return encryptedCVC;
 };
 
-async function cardExists(cardId){
+async function cardExists(cardId: number){
   const card = await cardRepository.findById(cardId);
 
   if(!card){
@@ -44,7 +47,7 @@ async function cardExists(cardId){
   }
 };
 
-async function isCardExpired(cardId){
+async function isCardExpired(cardId: number){
   const card = await cardRepository.findById(cardId);
   const today = dayjs().format('MM/YY');
   const isTodayAfterExpirationDate = dayjs(card.expirationDate).isBefore(today)
@@ -54,7 +57,7 @@ async function isCardExpired(cardId){
   }
 };
 
-async function cardAlreadyActivated(cardId){
+async function cardAlreadyActivated(cardId: number){
   const card = await cardRepository.findById(cardId);
 
   if(card.password){
@@ -62,7 +65,7 @@ async function cardAlreadyActivated(cardId){
   }
 };
 
-async function checkSecurityCode(securityCode, cardId){
+async function checkSecurityCode(securityCode: string, cardId: number){
   if(!securityCode){
     throw { type: "cardError", message: "CVC not sent", code: 400};
   }
@@ -70,12 +73,12 @@ async function checkSecurityCode(securityCode, cardId){
   const card = await cardRepository.findById(cardId);
   const encryptKey = process.env.CRYPTRKEY;
   const cryptr = new Cryptr(encryptKey);
-  const decryptedSecurityCode = cryptr.decrypt(card.securityCode);
-  console.log(decryptedSecurityCode) //TODO: Excluir linha depois
+  const decryptedSecurityCode: string = cryptr.decrypt(card.securityCode);
+  console.log(decryptedSecurityCode) //TODO: Deletar. Estou usando isso para saber o CVC
   if(securityCode !== decryptedSecurityCode){
     throw {type: "cardError", message: "Wrong CVC", code: 401};
   }
-}
+};
 
 async function checkPassword(password: number){
   if(typeof password !== 'number'){
@@ -85,13 +88,49 @@ async function checkPassword(password: number){
   if(password.toString().length !== 4){
     throw { type: "passwordError", message: "Password must have 4 characters", code: 400}
   }
-}
+};
 
-async function updatePassword(cardId, password){
+async function updatePassword(cardId: number, password: number){
   const SALT = 10;
   const encryptedPassword = await bcrypt.hash(password.toString(), SALT)
   await cardRepository.update(cardId, {password: encryptedPassword});
-}
+};
+
+async function unblock(cardId: number){
+  await cardRepository.update(cardId, {isBlocked: false});
+};
+
+async function getTransactions(cardId: number){
+  const transactions = await paymentRepository.findByCardId(cardId);
+  let totalTransactions = 0
+  
+  for(let i = 0; i < transactions.length; i++){ //TODO: Tentar fazer com reduce
+    totalTransactions += transactions[i].amount;
+  }
+
+  return {
+    transactions,
+    totalTransactions
+  };
+};
+
+async function getRecharges(cardId: number){
+  const recharges = await rechargeRepository.findByCardId(cardId);
+  let totalRecharges = 0;
+
+  for(let i = 0; i < recharges.length; i++){ //TODO: Tentar fazer com reduce
+    totalRecharges += recharges[i].amount;
+  };
+
+  return { 
+    recharges,
+    totalRecharges
+  }
+};
+
+async function cardBalance(income: number, expense: number){
+  return income - expense
+};
 
 export async function createUserCard(body){
   await employeeService.employeeExists(body.employeeId);
@@ -118,11 +157,25 @@ export async function createUserCard(body){
   await cardRepository.insert(data);
 };
 
-export async function activateCard(body, cardId){
+export async function activateCard(securityCode: string, password: number, cardId: number){
   await cardExists(cardId);
   await isCardExpired(cardId);
   await cardAlreadyActivated(cardId);
-  await checkSecurityCode(body.securityCode, cardId);
-  await checkPassword(body.password);
-  await updatePassword(cardId, body.password);
+  await checkSecurityCode(securityCode, cardId);
+  await checkPassword(password);
+  await updatePassword(cardId, password);
+  await unblock(cardId);
 };
+
+export async function getBalanceTransactions(cardId: number){
+  await cardExists(cardId);
+  const cardTransactions = await getTransactions(cardId);
+  const cardRecharges = await getRecharges(cardId);
+  const balance = await cardBalance(cardRecharges.totalRecharges, cardTransactions.totalTransactions);
+  
+  return {
+    balance,
+    transactions: cardTransactions.transactions,
+    recharges: cardRecharges.recharges
+  }
+}

@@ -7,8 +7,15 @@ export async function createCard(req: Request, res: Response){
   return res.sendStatus(201);
 };
 
-export async function activateCard(req: Request, res: Response){
-  const { id } = req.params;
-  await cardService.activateCard(req.body, id);
+export async function activateCard(req: Request <{ id: number }>, res: Response){
+  const { securityCode, password } : { securityCode: string, password: number} = req.body;
+  const { id } : { id: number } = req.params;
+  await cardService.activateCard(securityCode, password, id);
   return res.sendStatus(200);
 };
+
+export async function getCardInfo(req: Request <{id: number}>, res: Response){
+  const { id } = req.params;
+  const balanceTransactions = await cardService.getBalanceTransactions(id);
+  return res.status(200).send(balanceTransactions);
+}
