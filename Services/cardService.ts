@@ -100,6 +100,10 @@ async function unblock(cardId: number){
   await cardRepository.update(cardId, {isBlocked: false});
 };
 
+async function block(cardId: number){
+  await cardRepository.update(cardId, {isBlocked: true});
+}
+
 async function getTransactions(cardId: number){
   const transactions = await paymentRepository.findByCardId(cardId);
   let totalTransactions = 0
@@ -132,7 +136,7 @@ async function cardBalance(income: number, expense: number){
   return income - expense
 };
 
-async function isCardBlocked(cardId: number){
+async function canBlockCard(cardId: number){
   const cardInfo = await cardRepository.findById(cardId);
   const isBlocked = cardInfo.isBlocked;
   
@@ -140,6 +144,15 @@ async function isCardBlocked(cardId: number){
     throw { type: "cardError", message: "Card is already blocked", code: 403}
   };
 };
+
+async function canUnblockCard(cardId: number){
+  const cardInfo = await cardRepository.findById(cardId);
+  const isBlocked = cardInfo.isBlocked;
+
+  if(!isBlocked){
+    throw { type: "cardError", message: "Card is not blocked", code: 403}
+  };
+}
 
 async function comparePassword(cardId: number, password: number){
   const card =  await cardRepository.findById(cardId);
@@ -149,7 +162,7 @@ async function comparePassword(cardId: number, password: number){
   if(!isPasswordCorrect){
     throw { type: "cardError", message: "Wrong password", code: 403}
   }
-}
+};
 
 export async function createUserCard(body){
   await employeeService.employeeExists(body.employeeId);
@@ -202,7 +215,17 @@ export async function getBalanceTransactions(cardId: number){
 export async function blockCard(cardId: number, password: number){
   await cardExists(cardId);
   await isCardExpired(cardId);
-  await isCardBlocked(cardId);
+  await canBlockCard(cardId);
   await checkPassword(password);
   await comparePassword(cardId, password);
-}
+  await block(cardId);
+};
+
+export async function unblockCard(cardId: number, password: number){
+  await cardExists(cardId);
+  await isCardExpired(cardId);
+  await canUnblockCard(cardId);
+  await checkPassword(password);
+  await comparePassword(cardId, password);
+  await unblock(cardId);
+};

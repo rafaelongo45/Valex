@@ -25,4 +25,11 @@ export async function blockCard(req: Request <{id: number}>, res: Response){
   const { password } : { password: number }= req.body;
   await cardService.blockCard(id, password);
   return res.sendStatus(200);
-}
+};
+
+export async function unblockCard(req: Request <{id: number}>, res: Response){
+  const { id } = req.params;
+  const { password } : { password: number }= req.body;
+  await cardService.unblockCard(id, password);
+  return res.sendStatus(200);
+};
