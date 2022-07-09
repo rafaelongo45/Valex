@@ -39,7 +39,7 @@ function generateCVC(){
   return encryptedCVC;
 };
 
-async function cardExists(cardId: number){
+export async function cardExists(cardId: number){
   const card = await cardRepository.findById(cardId);
 
   if(!card){
@@ -47,10 +47,10 @@ async function cardExists(cardId: number){
   }
 };
 
-async function isCardExpired(cardId: number){
+export async function isCardExpired(cardId: number){
   const card = await cardRepository.findById(cardId);
   const today = dayjs().format('MM/YY');
-  const isTodayAfterExpirationDate = dayjs(card.expirationDate).isBefore(today)
+  const isTodayAfterExpirationDate = dayjs(card.expirationDate).isBefore(today);
   
   if(isTodayAfterExpirationDate){
     throw { type: "dateError", message: "Card is not valid anymore. Date expired.", code: 401}

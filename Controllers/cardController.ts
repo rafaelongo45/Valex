@@ -8,8 +8,8 @@ export async function createCard(req: Request, res: Response){
 };
 
 export async function activateCard(req: Request <{ id: number }>, res: Response){
+  const { id } = req.params;
   const { securityCode, password } : { securityCode: string, password: number} = req.body;
-  const { id } : { id: number } = req.params;
   await cardService.activateCard(securityCode, password, id);
   return res.sendStatus(200);
 };
