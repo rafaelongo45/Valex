@@ -80,7 +80,7 @@ async function checkSecurityCode(securityCode: string, cardId: number){
   }
 };
 
-async function checkPassword(password: number){
+export async function checkPassword(password: number){
   if(typeof password !== 'number'){
     throw { type: "passwordError", message: "Password must only have numbers", code: 400}
   }
@@ -104,7 +104,7 @@ async function block(cardId: number){
   await cardRepository.update(cardId, {isBlocked: true});
 }
 
-async function getTransactions(cardId: number){
+export async function getTransactions(cardId: number){
   const transactions = await paymentRepository.findByCardId(cardId);
   let totalTransactions = 0
   
@@ -118,7 +118,7 @@ async function getTransactions(cardId: number){
   };
 };
 
-async function getRecharges(cardId: number){
+export async function getRecharges(cardId: number){
   const recharges = await rechargeRepository.findByCardId(cardId);
   let totalRecharges = 0;
 
@@ -132,20 +132,20 @@ async function getRecharges(cardId: number){
   }
 };
 
-async function cardBalance(income: number, expense: number){
+export async function cardBalance(income: number, expense: number){
   return income - expense
 };
 
-async function canBlockCard(cardId: number){
+export async function isBlocked(cardId: number){
   const cardInfo = await cardRepository.findById(cardId);
   const isBlocked = cardInfo.isBlocked;
   
   if(isBlocked){
-    throw { type: "cardError", message: "Card is already blocked", code: 403}
+    throw { type: "cardError", message: "Card is blocked", code: 403}
   };
 };
 
-async function canUnblockCard(cardId: number){
+async function isUnblocked(cardId: number){
   const cardInfo = await cardRepository.findById(cardId);
   const isBlocked = cardInfo.isBlocked;
 
@@ -154,7 +154,7 @@ async function canUnblockCard(cardId: number){
   };
 }
 
-async function comparePassword(cardId: number, password: number){
+export async function comparePassword(cardId: number, password: number){
   const card =  await cardRepository.findById(cardId);
   const encryptedPassword = card.password;
   const isPasswordCorrect = bcrypt.compareSync(password.toString(), encryptedPassword);
@@ -215,7 +215,7 @@ export async function getBalanceTransactions(cardId: number){
 export async function blockCard(cardId: number, password: number){
   await cardExists(cardId);
   await isCardExpired(cardId);
-  await canBlockCard(cardId);
+  await isBlocked(cardId);
   await checkPassword(password);
   await comparePassword(cardId, password);
   await block(cardId);
@@ -224,7 +224,7 @@ export async function blockCard(cardId: number, password: number){
 export async function unblockCard(cardId: number, password: number){
   await cardExists(cardId);
   await isCardExpired(cardId);
-  await canUnblockCard(cardId);
+  await isUnblocked(cardId);
   await checkPassword(password);
   await comparePassword(cardId, password);
   await unblock(cardId);

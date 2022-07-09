@@ -6,15 +6,15 @@ export function isAmountValid(amount: number){
   const validAmount = amount && amount > 0
 
   if(!validAmount){
-    throw { type: "rechargeError", message: "Amount must be higher than zero", code: 400}
+    throw { type: "amountError", message: "Amount must be higher than zero", code: 400}
   }
 };
 
-async function isCardActive(cardId: number){
+export async function isCardActive(cardId: number){
   const card = await cardRepository.findById(cardId);
   
   if(!card.password){
-    throw { type: "rechargeError", message: "Card is not active", code: 403}
+    throw { type: "activationError", message: "Card is not active", code: 403}
   }
 };
 
@@ -24,7 +24,7 @@ async function insertAmount(cardId: number, amount: number){
     amount
   }
   await rechargeRepository.insert(rechargeData)
-}
+};
 
 export async function recharge(cardId, amount: number){
   isAmountValid(amount);
@@ -32,4 +32,4 @@ export async function recharge(cardId, amount: number){
   await isCardActive(cardId);
   await cardService.isCardExpired(cardId);
   await insertAmount(cardId, amount);
-}
+};
