@@ -10,6 +10,6 @@ cardRouter.post("/card/create", validateKey, validateCardType, createCard);
 cardRouter.post("/card/activation/:id", activateCard);
 cardRouter.get("/card/info/:id", getCardInfo);
 cardRouter.post("/card/block/:id", blockCard);
-cardRouter.post("/card/unblock/:id", unblockCard)
+cardRouter.post("/card/unblock/:id", unblockCard);
 
 export default cardRouter;

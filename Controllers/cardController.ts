@@ -1,15 +1,17 @@
 import { Request, Response } from "express";
+import { TransactionTypes } from "../repositories/cardRepository.js";
 
 import * as cardService from "../Services/cardService.js";
 
 export async function createCard(req: Request, res: Response){
-  await cardService.createUserCard(req.body);
+  const { employeeId, type } : { employeeId: number, type: TransactionTypes }= req.body;
+  await cardService.createUserCard(employeeId, type);
   return res.sendStatus(201);
 };
 
 export async function activateCard(req: Request <{ id: number }>, res: Response){
   const { id } = req.params;
-  const { securityCode, password } : { securityCode: string, password: number} = req.body;
+  const { securityCode, password } : { securityCode: number, password: number} = req.body;
   await cardService.activateCard(securityCode, password, id);
   return res.sendStatus(200);
 };

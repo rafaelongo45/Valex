@@ -6,11 +6,11 @@ async function APIKeyExists(key){
   const companyRequest = await companyRepository.findByApiKey(key);
 
   if(!companyRequest){
-    throw { type:"APIKey", message: "No company has this API Key", code:400 }
+    throw { type: "APIKey", message: "No company has this API Key", code: 400 }
   }
 };
 
-export async function validateKey(req: Request <{ key: string }>, res: Response, next: NextFunction){
+export async function validateKey(req: Request, res: Response, next: NextFunction){
   const { key } = req.headers; 
 
   if(!key){

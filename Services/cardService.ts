@@ -35,7 +35,7 @@ function generateCVC(){
   const encryptKey = process.env.CRYPTRKEY;
   const CVC = faker.random.numeric(3);
   const cryptr = new Cryptr(encryptKey);
-  const encryptedCVC = cryptr.encrypt(CVC);
+  const encryptedCVC : string = cryptr.encrypt(CVC);
   return encryptedCVC;
 };
 
@@ -47,12 +47,25 @@ export async function cardExists(cardId: number){
   }
 };
 
+function checkExpirationDate(today: string, expirationDate: string){
+  const monthToday = today[0] + today[1];
+  const yearToday = today[3] + today[4];
+  const monthExpiration = expirationDate[0] + expirationDate[1];
+  const yearExpiration = expirationDate[3] + expirationDate[4];
+  
+  const isMonthValid = parseInt(monthExpiration) - parseInt(monthToday) >= 0;
+  const isYearValid = parseInt(yearExpiration) - parseInt(yearToday) >= 0;
+  const isValid = isMonthValid && isYearValid;
+  
+  return !isValid;
+}
+
 export async function isCardExpired(cardId: number){
   const card = await cardRepository.findById(cardId);
   const today = dayjs().format('MM/YY');
-  const isTodayAfterExpirationDate = dayjs(card.expirationDate).isBefore(today);
-  
-  if(isTodayAfterExpirationDate){
+  const isCardExpired = checkExpirationDate(today, card.expirationDate);
+
+  if(isCardExpired){
     throw { type: "dateError", message: "Card is not valid anymore. Date expired.", code: 401}
   }
 };
@@ -65,7 +78,7 @@ async function cardAlreadyActivated(cardId: number){
   }
 };
 
-async function checkSecurityCode(securityCode: string, cardId: number){
+async function checkSecurityCode(securityCode: number, cardId: number){
   if(!securityCode){
     throw { type: "cardError", message: "CVC not sent", code: 400};
   }
@@ -73,26 +86,29 @@ async function checkSecurityCode(securityCode: string, cardId: number){
   const card = await cardRepository.findById(cardId);
   const encryptKey = process.env.CRYPTRKEY;
   const cryptr = new Cryptr(encryptKey);
-  const decryptedSecurityCode: string = cryptr.decrypt(card.securityCode);
-  console.log(decryptedSecurityCode) //TODO: Deletar. Estou usando isso para saber o CVC
+  const decryptedSecurityCode = parseInt(cryptr.decrypt(card.securityCode));
+
   if(securityCode !== decryptedSecurityCode){
     throw {type: "cardError", message: "Wrong CVC", code: 401};
   }
 };
 
 export async function checkPassword(password: number){
-  if(typeof password !== 'number'){
+  const isLengthValid = password.toString().length === 4;
+  const isTypeValid = typeof password === 'number'
+
+  if(!isTypeValid){
     throw { type: "passwordError", message: "Password must only have numbers", code: 400}
   }
 
-  if(password.toString().length !== 4){
+  if(!isLengthValid){
     throw { type: "passwordError", message: "Password must have 4 characters", code: 400}
   }
 };
 
 async function updatePassword(cardId: number, password: number){
   const SALT = 10;
-  const encryptedPassword = await bcrypt.hash(password.toString(), SALT)
+  const encryptedPassword: string = await bcrypt.hash(password.toString(), SALT)
   await cardRepository.update(cardId, {password: encryptedPassword});
 };
 
@@ -155,26 +171,26 @@ async function isUnblocked(cardId: number){
 }
 
 export async function comparePassword(cardId: number, password: number){
-  const card =  await cardRepository.findById(cardId);
+  const card = await cardRepository.findById(cardId);
   const encryptedPassword = card.password;
-  const isPasswordCorrect = bcrypt.compareSync(password.toString(), encryptedPassword);
+  const isPasswordCorrect: boolean = bcrypt.compareSync(password.toString(), encryptedPassword);
   
   if(!isPasswordCorrect){
     throw { type: "cardError", message: "Wrong password", code: 403}
   }
 };
 
-export async function createUserCard(body){
-  await employeeService.employeeExists(body.employeeId);
-  await checkCardType(body.type, body.employeeId);
-  const employee = await employeeRepository.findById(body.employeeId);
+export async function createUserCard(employeeId: number, type: cardRepository.TransactionTypes){
+  await employeeService.employeeExists(employeeId);
+  await checkCardType(type, employeeId);
+  const employee = await employeeRepository.findById(employeeId);
   const number = generateCardNumber();
   const formattedName = employeeService.formatEmployeeName(employee.fullName);
   const expirationDate = createExpirationDate();
   const securityCode = generateCVC();
 
   const data = {
-      employeeId: body.employeeId,
+      employeeId: employeeId,
       number,
       cardholderName: formattedName,
       originalCardId: null,
@@ -183,13 +199,13 @@ export async function createUserCard(body){
       expirationDate,
       isVirtual: false, //Apenas cartões físicos estão sendo gerados
       isBlocked: true,
-      type: body.type
+      type: type
   }
   
   await cardRepository.insert(data);
 };
 
-export async function activateCard(securityCode: string, password: number, cardId: number){
+export async function activateCard(securityCode: number, password: number, cardId: number){
   await cardExists(cardId);
   await isCardExpired(cardId);
   await cardAlreadyActivated(cardId);
