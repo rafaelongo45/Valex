@@ -15,6 +15,7 @@ app.use(express.json());
 app.use(router);
 app.use(handleError);
 
-app.listen(process.env.PORT, 
-  () => console.log(chalk.bold.green(`Server running on port ${process.env.PORT}`))
+const port = process.env.PORT || 5000
+app.listen(port, 
+  () => console.log(chalk.bold.green(`Server running on port ${port}`))
 );
