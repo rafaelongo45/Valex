@@ -87,7 +87,7 @@ async function checkSecurityCode(securityCode: number, cardId: number){
   const encryptKey = process.env.CRYPTRKEY;
   const cryptr = new Cryptr(encryptKey);
   const decryptedSecurityCode = parseInt(cryptr.decrypt(card.securityCode));
-
+  console.log(decryptedSecurityCode)
   if(securityCode !== decryptedSecurityCode){
     throw {type: "cardError", message: "Wrong CVC", code: 401};
   }
@@ -245,3 +245,13 @@ export async function unblockCard(cardId: number, password: number){
   await comparePassword(cardId, password);
   await unblock(cardId);
 };
+
+export async function getCardByDetails(number: string, name: string, expirationDate: string){
+  const card = await cardRepository.findByCardDetails(number, name, expirationDate);
+
+  if(!card){
+    throw { type: "cardError", message: "Card data is incorrect", code: 403 };
+  }
+
+  return card.id;
+}

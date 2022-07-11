@@ -54,4 +54,24 @@ export async function createPurchase(businessId: number, cardId: number, passwor
     amount
   }
   await paymentRepository.insert(paymentData);
+};
+
+export async function createOnlinePurchase(businessId: number, number: string, name: string, expirationDate: string, securityCode: number, amount:number){
+  checkAmount(amount);
+  const cardId = await cardService.getCardByDetails(number, name, expirationDate);
+  await rechargeService.isCardActive(cardId);
+  await cardService.isCardExpired(cardId);
+  await cardService.isBlocked(cardId);
+  await businessExists(businessId);
+  await checkBusinessAndCardType(businessId, cardId);
+  const cardTransactions = await cardService.getTransactions(cardId);
+  const cardRecharges = await cardService.getRecharges(cardId);
+  const balance = await cardService.cardBalance(cardRecharges.totalRecharges, cardTransactions.totalTransactions);
+  isPurchaseValid(balance, amount); 
+  const paymentData = {
+    cardId,
+    businessId,
+    amount
+  }
+  await paymentRepository.insert(paymentData);
 }

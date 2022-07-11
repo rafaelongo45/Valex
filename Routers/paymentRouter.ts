@@ -1,9 +1,10 @@
 import { Router } from "express";
 
-import { postPurchase } from "../Controllers/paymentController.js";
+import { onlinePurchase, postPurchase } from "../Controllers/paymentController.js";
 
 const purchasesRouter = Router();
 
 purchasesRouter.post("/purchase/:businessId", postPurchase);
+purchasesRouter.post("/purchase/online/:businessId", onlinePurchase);
 
 export default purchasesRouter;
